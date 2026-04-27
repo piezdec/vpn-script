@@ -644,7 +644,7 @@ if [[ -f $XUIDB ]]; then
     ],
     "settings": {
       "publicKey": "${public_key}",
-      "fingerprint": "random",
+      "fingerprint": "firefox",
       "serverName": "",
       "spiderX": "/"
     }
