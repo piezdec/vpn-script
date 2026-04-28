@@ -125,7 +125,7 @@ UNINSTALL_XUI(){
     $Pak -y purge nginx nginx-common nginx-core nginx-full python3-certbot-nginx
     $Pak -y autoremove
     $Pak -y autoclean
-    rm -rf "/var/www/html/" "/etc/nginx/" "/usr/share/nginx/"
+    rm -rf "/var/www/html/" "/etc/nginx/" "/usr/share/nginx/" "/root/cert/"
     snap remove nextcloud 2>/dev/null
     # Uninstall Hysteria2
     systemctl stop hysteria-server 2>/dev/null
@@ -178,6 +178,11 @@ reality_domain=$(echo "$reality_domain" 2>&1 | tr -d '[:space:]' )
 ###############################Install Packages#########################################################
 ufw disable 2>/dev/null
 if [[ ${INSTALL} == *"y"* ]]; then
+    version=$(grep -oP '(?<=VERSION_ID=")[0-9]+' /etc/os-release)
+    if [[ "$version" == "20" || "$version" == "22" || "$version" == "24" ]]; then
+        msg_inf "Версия системы: Ubuntu $version"
+    fi
+
     $Pak -y update
     $Pak -y install curl wget jq bash sudo nginx-full certbot python3-certbot-nginx sqlite3 ufw snapd
     # Install Docker if MTProto requested
@@ -205,6 +210,17 @@ resolve_to_ip () {
     [[ -n "$a" ]] && [[ "$a" == "$IP4" ]]
 }
 
+if [[ ${AUTODOMAIN} == *"y"* ]]; then
+    if ! resolve_to_ip "$domain"; then
+        msg_err "Auto-domain $domain does not resolve to this server IP ($IP4). Fix DNS/service and retry."
+        exit 1
+    fi
+    if ! resolve_to_ip "$reality_domain"; then
+        msg_err "Auto-domain $reality_domain does not resolve to this server IP ($IP4). Fix DNS/service and retry."
+        exit 1
+    fi
+fi
+
 certbot certonly --standalone --non-interactive --agree-tos --register-unsafely-without-email -d "$domain"
 if [[ ! -d "/etc/letsencrypt/live/${domain}/" ]]; then
     systemctl start nginx >/dev/null 2>&1
@@ -227,6 +243,12 @@ chmod 644 /etc/letsencrypt/archive/${reality_domain}/*.pem 2>/dev/null
 chmod -R 755 /etc/letsencrypt/live/${domain}/ 2>/dev/null
 chmod -R 755 /etc/letsencrypt/archive/${domain}/ 2>/dev/null
 chmod 644 /etc/letsencrypt/archive/${domain}/*.pem 2>/dev/null
+
+##############################Symlinks for x-ui HTTPS panel#############################################
+mkdir -p /root/cert/${domain}
+chmod 755 /root/cert/*
+ln -sf /etc/letsencrypt/live/${domain}/fullchain.pem /root/cert/${domain}/fullchain.pem
+ln -sf /etc/letsencrypt/live/${domain}/privkey.pem /root/cert/${domain}/privkey.pem
 
 ###################################Get Installed XUI Port/Path##########################################
 if [[ -f $XUIDB ]]; then
@@ -319,20 +341,31 @@ server {
     error_page 400 401 402 403 500 501 502 503 504 =404 /404;
     proxy_intercept_errors on;
 
+    #X-UI Admin Panel (HTTPS upstream)
     location /${panel_path}/ {
-        proxy_redirect off;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:${panel_port};
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+        proxy_pass https://127.0.0.1:${panel_port};
         break;
     }
     location /${panel_path} {
-        proxy_redirect off;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:${panel_port};
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+        proxy_pass https://127.0.0.1:${panel_port};
         break;
     }
 
@@ -372,20 +405,31 @@ server {
         proxy_send_timeout 3600;
     }
 
+    #X-UI Admin Panel (HTTPS upstream)
     location /${panel_path}/ {
-        proxy_redirect off;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:${panel_port};
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+        proxy_pass https://127.0.0.1:${panel_port};
         break;
     }
     location /${panel_path} {
-        proxy_redirect off;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:${panel_port};
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+        proxy_pass https://127.0.0.1:${panel_port};
         break;
     }
 }
@@ -419,7 +463,7 @@ cat > "/etc/nginx/snippets/includes.conf" << EOF
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:${sub_port};
+        proxy_pass https://127.0.0.1:${sub_port};
         break;
     }
     location /${sub_path}/ {
@@ -428,7 +472,7 @@ cat > "/etc/nginx/snippets/includes.conf" << EOF
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:${sub_port};
+        proxy_pass https://127.0.0.1:${sub_port};
         break;
     }
     location /assets/ {
@@ -437,7 +481,7 @@ cat > "/etc/nginx/snippets/includes.conf" << EOF
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:${sub_port};
+        proxy_pass https://127.0.0.1:${sub_port};
         break;
     }
     location /assets {
@@ -446,7 +490,7 @@ cat > "/etc/nginx/snippets/includes.conf" << EOF
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:${sub_port};
+        proxy_pass https://127.0.0.1:${sub_port};
         break;
     }
     location /${json_path} {
@@ -455,7 +499,7 @@ cat > "/etc/nginx/snippets/includes.conf" << EOF
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:${sub_port};
+        proxy_pass https://127.0.0.1:${sub_port};
         break;
     }
     location /${json_path}/ {
@@ -464,23 +508,22 @@ cat > "/etc/nginx/snippets/includes.conf" << EOF
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:${sub_port};
+        proxy_pass https://127.0.0.1:${sub_port};
         break;
     }
-    #XHTTP
+    #XHTTP (gRPC over Unix socket)
     location /${xhttp_path} {
-        proxy_pass http://unix:/dev/shm/uds2023.sock;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host \$host;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_read_timeout 1h;
-        proxy_send_timeout 1h;
-        proxy_buffering off;
-        proxy_request_buffering off;
-        client_max_body_size 0;
+        grpc_pass grpc://unix:/dev/shm/uds2023.sock;
+        grpc_buffer_size         16k;
+        grpc_socket_keepalive    on;
+        grpc_read_timeout        1h;
+        grpc_send_timeout        1h;
+        grpc_set_header Connection         "";
+        grpc_set_header X-Forwarded-For    \$proxy_add_x_forwarded_for;
+        grpc_set_header X-Forwarded-Proto  \$scheme;
+        grpc_set_header X-Forwarded-Port   \$server_port;
+        grpc_set_header Host               \$host;
+        grpc_set_header X-Forwarded-Host   \$host;
     }
     #Xray Config Path
     location ~ ^/(?<fwdport>\d+)/(?<fwdpath>.*)\$ {
@@ -545,7 +588,7 @@ if [[ -f $XUIDB ]]; then
     x-ui stop
     output=$(/usr/local/x-ui/bin/xray-linux-amd64 x25519)
     private_key=$(echo "$output" | grep "^PrivateKey:" | awk '{print $2}')
-    public_key=$(echo "$output" | grep "^Password:" | awk '{print $2}')
+    public_key=$(echo "$output" | grep "^Password" | awk '{print $3}')
     client_id=$(/usr/local/x-ui/bin/xray-linux-amd64 uuid)
     client_id2=$(/usr/local/x-ui/bin/xray-linux-amd64 uuid)
     client_id3=$(/usr/local/x-ui/bin/xray-linux-amd64 uuid)
@@ -557,6 +600,8 @@ if [[ -f $XUIDB ]]; then
          INSERT INTO "settings" ("key", "value") VALUES ("subURI",  '${sub_uri}');
          INSERT INTO "settings" ("key", "value") VALUES ("subJsonPath",  '${json_path}');
          INSERT INTO "settings" ("key", "value") VALUES ("subJsonURI",  '${json_uri}');
+         INSERT INTO "settings" ("key", "value") VALUES ("subClashEnable",  'false');
+         INSERT INTO "settings" ("key", "value") VALUES ("subEnableRouting",  'false');
          INSERT INTO "settings" ("key", "value") VALUES ("subEnable",  'true');
          INSERT INTO "settings" ("key", "value") VALUES ("webListen",  '');
          INSERT INTO "settings" ("key", "value") VALUES ("webDomain",  '');
@@ -610,7 +655,9 @@ if [[ -f $XUIDB ]]; then
       "enable": true,
       "tgId": "",
       "subId": "first",
-      "reset": 0
+      "reset": 0,
+      "created_at": 1756726925000,
+      "updated_at": 1756726925000
     }
   ],
   "decryption": "none",
@@ -680,7 +727,9 @@ if [[ -f $XUIDB ]]; then
       "enable": true,
       "tgId": "",
       "subId": "first",
-      "reset": 0
+      "reset": 0,
+      "created_at": 1756726925000,
+      "updated_at": 1756726925000
     }
   ],
   "decryption": "none",
@@ -729,7 +778,9 @@ if [[ -f $XUIDB ]]; then
       "enable": true,
       "tgId": "",
       "subId": "first",
-      "reset": 0
+      "reset": 0,
+      "created_at": 1756726925000,
+      "updated_at": 1756726925000
     }
   ],
   "decryption": "none",
@@ -799,7 +850,9 @@ if [[ -f $XUIDB ]]; then
       "reset": 0,
       "subId": "first",
       "tgId": 0,
-      "totalGB": 0
+      "totalGB": 0,
+      "created_at": 1756726925000,
+      "updated_at": 1756726925000
     }
   ],
   "fallbacks": []
@@ -831,6 +884,7 @@ if [[ -f $XUIDB ]]; then
          );
 EOF
 /usr/local/x-ui/x-ui setting -username "${config_username}" -password "${config_password}" -port "${panel_port}" -webBasePath "${panel_path}"
+/usr/local/x-ui/x-ui cert -webCert "/root/cert/${domain}/fullchain.pem" -webCertKey "/root/cert/${domain}/privkey.pem"
 x-ui start
 else
     msg_err "x-ui.db file not exist! Maybe x-ui isn't installed." && exit 1;
@@ -922,11 +976,14 @@ else
     x-ui restart
 fi
 
-######################enable bbr########################################################################
+######################enable bbr and tune system########################################################
 apt-get install -yqq --no-install-recommends ca-certificates
 echo "net.core.default_qdisc=fq" | tee -a /etc/sysctl.conf
 echo "net.ipv4.tcp_congestion_control=bbr" | tee -a /etc/sysctl.conf
 echo "fs.file-max=2097152" | tee -a /etc/sysctl.conf
+echo "net.ipv4.tcp_timestamps = 1" | tee -a /etc/sysctl.conf
+echo "net.ipv4.tcp_sack = 1" | tee -a /etc/sysctl.conf
+echo "net.ipv4.tcp_window_scaling = 1" | tee -a /etc/sysctl.conf
 echo "net.core.rmem_max = 16777216" | tee -a /etc/sysctl.conf
 echo "net.core.wmem_max = 16777216" | tee -a /etc/sysctl.conf
 echo "net.ipv4.tcp_rmem = 4096 87380 16777216" | tee -a /etc/sysctl.conf
