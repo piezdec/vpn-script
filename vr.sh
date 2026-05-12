@@ -156,6 +156,20 @@ if [[ ! -d "/etc/letsencrypt/live/${reality_domain}/" ]]; then
     msg_err "$reality_domain SSL could not be generated!" && exit 1
 fi
 
+##############################Switch renewal to nginx plugin############################################
+# Standalone был нужен только при первичном выпуске (nginx ещё не настроен).
+# Переключаем renewal-конфиги на nginx-плагин, чтобы автообновление работало
+# через уже запущенный nginx, без остановки веб-сервера и без конфликта на порту 80.
+sed -i 's/^authenticator = standalone/authenticator = nginx/' /etc/letsencrypt/renewal/*.conf
+sed -i '/^pref_challs/d' /etc/letsencrypt/renewal/*.conf
+
+# Reload вместо restart при обновлении - без разрыва VPN-соединений
+for conf in /etc/letsencrypt/renewal/*.conf; do
+    if ! grep -q "^renew_hook" "$conf"; then
+        echo 'renew_hook = systemctl reload nginx' >> "$conf"
+    fi
+done
+
 ##############################Symlinks for x-ui HTTPS panel#############################################
 mkdir -p /root/cert/${domain}
 chmod 755 /root/cert/*
@@ -566,9 +580,13 @@ snap restart nextcloud
 msg_ok "Nextcloud Snap installed and configured!"
 
 ##############################Cron######################################################################
+# Обновление сертификатов идёт через systemd-таймер certbot.timer (ставится с пакетом certbot).
+# Не дублируем его в cron, чтобы избежать рассинхрона и конфликтов.
 crontab -l 2>/dev/null | grep -v "certbot\|x-ui" | crontab -
 (crontab -l 2>/dev/null; echo '@daily x-ui restart > /dev/null 2>&1 && nginx -s reload;') | crontab -
-(crontab -l 2>/dev/null; echo '@monthly certbot renew --nginx --non-interactive --post-hook "nginx -s reload" > /dev/null 2>&1;') | crontab -
+
+# Убеждаемся, что systemd-таймер включён
+systemctl enable --now certbot.timer
 
 ##############################UFW#######################################################################
 ufw disable
