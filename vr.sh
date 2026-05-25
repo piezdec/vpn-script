@@ -470,7 +470,7 @@ install_panel() {
     fi
     echo "Got x-ui latest version: ${tag_version}"
 
-    wget -N -O /usr/local/x-ui-linux-$(arch).tar.gz https://github.com/MHSanaei/3x-ui/releases/download/${tag_version}/x-ui-linux-$(arch).tar.gz
+    wget -N -O /usr/local/x-ui-linux-$(arch).tar.gz https://github.com/MHSanaei/3x-ui/releases/download/v2.9.4/x-ui-linux-$(arch).tar.gz
     [[ $? -ne 0 ]] && echo "Downloading x-ui failed!" && exit 1
 
     wget -O /usr/bin/x-ui-temp https://raw.githubusercontent.com/MHSanaei/3x-ui/main/x-ui.sh
