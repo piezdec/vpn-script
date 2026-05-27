@@ -1,19 +1,37 @@
 #!/bin/bash
 set -e
 
-#################### НАСТРОЙКИ - ПОПРАВЬТЕ ПОД СЕБЯ ####################
-DOMAIN="cdn.alexnexts3storage.ru"
-EMAIL=""          # для уведомлений Let's Encrypt; можно оставить пустым ""
-
-# Вариант маскарада. Выберите ОДИН, раскомментировав нужный блок ниже
-# (в секции "ГЕНЕРАЦИЯ КОНФИГА"). По умолчанию - proxy на нейтральный сайт.
-MASQ_URL="https://alexnexts3storage.ru/"   # сайт, которым будет "притворяться" сервер
-                                           # (здесь - ваш Nextcloud; для несвязанности
-                                           #  можно заменить на https://www.bing.com/)
+#################### НАСТРОЙКИ ########################################
+EMAIL=""                                   # для уведомлений Let's Encrypt; можно оставить пустым
+DEFAULT_MASQ_URL="https://www.bing.com/"   # значение по умолчанию для маскарада
 #######################################################################
 
-# --- проверки ---
+# --- проверка прав ---
 [[ $EUID -ne 0 ]] && echo "Запустите от root!" && exit 1
+
+# --- интерактивный ввод ---
+echo
+read -rp "Введите домен для Hysteria2 (например, s5.example.com): " DOMAIN
+DOMAIN=$(echo "$DOMAIN" | tr -d '[:space:]')
+if [[ -z "$DOMAIN" ]]; then
+    echo "Домен не указан. Прерываю."
+    exit 1
+fi
+
+read -rp "Введите URL для маскарада [по умолчанию: $DEFAULT_MASQ_URL]: " MASQ_URL
+MASQ_URL=$(echo "$MASQ_URL" | tr -d '[:space:]')
+[[ -z "$MASQ_URL" ]] && MASQ_URL="$DEFAULT_MASQ_URL"
+
+echo
+echo "    Домен:    $DOMAIN"
+echo "    Маскарад: $MASQ_URL"
+echo
+read -rp "Всё верно? Продолжить установку? [y/N]: " CONFIRM
+if [[ ! "$CONFIRM" =~ ^[yY]$ ]]; then
+    echo "Отмена."
+    exit 0
+fi
+echo
 
 echo ">>> Проверяю, что 443/UDP свободен..."
 if ss -ulnp | grep -q ':443 '; then
@@ -85,20 +103,11 @@ auth:
   password: $PASSWORD
 
 # Маскарад: при заходе обычным браузером сервер притворяется веб-сайтом.
-# Вариант 1 (по умолчанию) - проксирует на реальный сайт:
 masquerade:
   type: proxy
   proxy:
     url: $MASQ_URL
     rewriteHost: true
-
-# Вариант 2 - отдавать статичную страницу-заглушку (раскомментируйте, удалив блок выше):
-# masquerade:
-#   type: string
-#   string:
-#     content: "Hello World"
-#     headers:
-#       content-type: text/plain
 EOF
 
 # --- firewall ---
