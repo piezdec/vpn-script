@@ -1,7 +1,4 @@
-```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/piezdec/vpn-script/main/vpn.sh) -install y
-```
-VLESS+REALITY ONLY
+VLESS+REALITY
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/piezdec/vpn-script/main/vr.sh) -install y
 ```
