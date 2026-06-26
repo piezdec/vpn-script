@@ -40,7 +40,7 @@ EOF
 #    appended to /etc/sysctl.conf — so it doesn't override our file.
 #    We take key names from our own file and strip them from sysctl.conf.
 if [ -f /etc/sysctl.conf ]; then
-    cp /etc/sysctl.conf /etc/sysctl.conf.bak.$(date +%s)
+    [ -f /etc/sysctl.conf.bak ] || cp /etc/sysctl.conf /etc/sysctl.conf.bak
     grep -oP '^\s*\K[a-z0-9._]+(?=\s*=)' "$CONF" | while read -r key; do
         esc=$(echo "$key" | sed 's/\./\\./g')
         sed -i "/^\s*${esc}\s*=/d" /etc/sysctl.conf
