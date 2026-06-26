@@ -9,5 +9,4 @@ bash <(curl -fsSL https://raw.githubusercontent.com/piezdec/vpn-script/main/hy2.
 SERVER CORE OPTIMIZATION
 ```bash
 sudo wget -O /etc/sysctl.d/99-vpn.conf https://raw.githubusercontent.com/piezdec/vpn-script/main/optimize.sh
-sudo sysctl --system
 ```
