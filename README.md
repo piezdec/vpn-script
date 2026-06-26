@@ -9,3 +9,8 @@ HYSTERIA2
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/Piezdec/vpn-script/main/hy2.sh)
 ```
+SERVER CORE OPTIMIZATION
+```bash
+sudo wget -O /etc/sysctl.d/99-vpn.conf https://raw.githubusercontent.com/user/vpn-script/main/sysctl.conf
+sudo sysctl --system
+```
