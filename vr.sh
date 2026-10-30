@@ -463,17 +463,12 @@ install_panel() {
     apt-get update && apt-get install -y -q wget curl tar tzdata
     cd /usr/local/
 
-    tag_version=$(curl -Ls "https://api.github.com/repos/MHSanaei/3x-ui/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
-    if [[ -z "$tag_version" ]]; then
-        tag_version=$(curl -4 -Ls "https://api.github.com/repos/MHSanaei/3x-ui/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
-        [[ -z "$tag_version" ]] && echo "Failed to fetch x-ui version!" && exit 1
-    fi
-    echo "Got x-ui latest version: ${tag_version}"
+XUI_VERSION="v2.9.4"
 
-    wget -N -O /usr/local/x-ui-linux-$(arch).tar.gz https://github.com/MHSanaei/3x-ui/releases/download/v2.9.4/x-ui-linux-$(arch).tar.gz
+    wget -N -O /usr/local/x-ui-linux-$(arch).tar.gz https://github.com/MHSanaei/3x-ui/releases/download/${XUI_VERSION}/x-ui-linux-$(arch).tar.gz
     [[ $? -ne 0 ]] && echo "Downloading x-ui failed!" && exit 1
 
-    wget -O /usr/bin/x-ui-temp https://raw.githubusercontent.com/MHSanaei/3x-ui/main/x-ui.sh
+    wget -O /usr/bin/x-ui-temp https://raw.githubusercontent.com/MHSanaei/3x-ui/${XUI_VERSION}/x-ui.sh
     [[ $? -ne 0 ]] && echo "Failed to download x-ui.sh" && exit 1
 
     if [[ -e /usr/local/x-ui/ ]]; then
