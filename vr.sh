@@ -344,7 +344,7 @@ VALUES ('1','1','first','0','0','0','0','0');
 INSERT INTO "inbounds" ("user_id","up","down","total","remark","enable","expiry_time","listen","port","protocol","settings","stream_settings","tag","sniffing")
 VALUES (
 '1','0','0','0',
-'${emoji_flag} reality','1','0','',
+'${emoji_flag} reality','1','0','127.0.0.1',
 '8443','vless',
 '{
   "clients": [
