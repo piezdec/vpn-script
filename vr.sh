@@ -301,34 +301,6 @@ server {
         proxy_connect_timeout 3600;
         proxy_send_timeout    3600;
     }
-
-    #X-UI Admin Panel (HTTPS upstream)
-    location /${panel_path}/ {
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto https;
-        proxy_read_timeout 3600s;
-        proxy_send_timeout 3600s;
-        proxy_pass https://127.0.0.1:${panel_port};
-        break;
-    }
-    location /${panel_path} {
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto https;
-        proxy_read_timeout 3600s;
-        proxy_send_timeout 3600s;
-        proxy_pass https://127.0.0.1:${panel_port};
-        break;
-    }
 }
 EOF
 
@@ -463,7 +435,7 @@ install_panel() {
     apt-get update && apt-get install -y -q wget curl tar tzdata
     cd /usr/local/
 
-XUI_VERSION="v2.9.4"
+    XUI_VERSION="v2.9.4"
 
     wget -N -O /usr/local/x-ui-linux-$(arch).tar.gz https://github.com/MHSanaei/3x-ui/releases/download/${XUI_VERSION}/x-ui-linux-$(arch).tar.gz
     [[ $? -ne 0 ]] && echo "Downloading x-ui failed!" && exit 1
