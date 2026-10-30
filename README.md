@@ -1,6 +1,6 @@
 VLESS+REALITY
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/piezdec/vpn-script/main/vr.sh) -install y
+bash <(curl -fsSL https://raw.githubusercontent.com/piezdec/vpn-script/main/vr.sh)
 ```
 HYSTERIA2
 ```bash
